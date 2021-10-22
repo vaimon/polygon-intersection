@@ -10,6 +10,39 @@ using System.Windows.Forms;
 
 namespace polygon_intersection
 {
+
+    /// <summary>
+    /// https://ru.stackoverflow.com/questions/672647/Как-найти-угол-между-векторами
+    /// </summary>
+    struct Vector
+    {
+        public double X { get; }
+        public double Y { get; }
+
+        public Vector(double x, double y)
+        {
+            X = x; Y = y;
+        }
+
+        public static readonly Vector Reference = new Vector(1, 0);
+
+        public static double AngleOfReference(Vector v)
+            => NormalizeAngle(Math.Atan2(v.Y, v.X) / Math.PI * 180);
+
+        public static double AngleOfVectors(Vector first, Vector second)
+            => NormalizeAngle(AngleOfReference(first) - AngleOfReference(second));
+
+        private static double NormalizeAngle(double angle)
+        {
+            bool CheckBottom(double a) => a >= 0;
+            bool CheckTop(double a) => a < 360;
+
+            double turn = CheckBottom(angle) ? -360 : 360;
+            while (!(CheckBottom(angle) && CheckTop(angle))) angle += turn;
+            return angle;
+        }
+    }
+
     public partial class Form1 : Form
     {
         public Form1()
@@ -236,9 +269,40 @@ namespace polygon_intersection
             innerPolygon.AddRange(polygon1Points.Where(p => isPointInPolygon(p,polygon2Points)));
             innerPolygon.AddRange(polygon2Points.Where(p => isPointInPolygon(p, polygon1Points)));
 
+            for(int i =0; i < polygon1Points.Count; i++)
+            {
+                for(int j = 0; j < polygon2Points.Count; j++)
+                {
+                    var p1 = polygon1Points[i];
+                    var q1 = polygon1Points[(i + 1) % polygon1Points.Count];
+                    var p2 = polygon2Points[j];
+                    var q2 = polygon2Points[(j + 1) % polygon2Points.Count];
+                    if (doIntersect(p1,q1,p2,q2))
+                    {
+                        innerPolygon.Add(CrossLines(p1, q1, p2, q2));
+                    }
+                }
+            }
+            if(innerPolygon.Count == 0)
+            {
+                return;
+            }
+            int x = 0, y = 0;
+            foreach(var p in innerPolygon)
+            {
+                x += p.X;
+                y += p.Y;
+            }
+            var center = new Point(x/innerPolygon.Count, y/innerPolygon.Count);
+            innerPolygon = innerPolygon.OrderBy(p => Vector.AngleOfVectors(new Vector(1, 0), new Vector(p.X - center.X, p.Y - center.Y))).ToList();
+
             foreach(var p in innerPolygon)
             {
                 g.FillEllipse(new SolidBrush(Color.Red), p.X - 4, p.Y - 4, 9, 9);
+            }
+            for(int i = 0; i < innerPolygon.Count; i++)
+            {
+                g.DrawLine(new Pen(Color.Red, 5), innerPolygon[i], innerPolygon[(i + 1) % innerPolygon.Count]);
             }
         }
     }
