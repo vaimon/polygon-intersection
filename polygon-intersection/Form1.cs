@@ -111,14 +111,38 @@ namespace polygon_intersection
         {
             // определение принадлежности точки многоугольнику
             bool inPolygon = false;
-            int j = polygonPoints.Count() - 1;
-            for (int i = 0; i < polygonPoints.Count(); i++)
+            int counter = 0;
+            double xinters;
+            Point p1, p2;
+            int pointCount = polygonPoints.Count;
+            p1 = polygonPoints[0];
+            for (int i = 1; i <= pointCount; i++)
             {
-                if (polygonPoints[i].Y < p.Y && polygonPoints[j].Y >= p.Y || polygonPoints[j].Y < p.Y && polygonPoints[i].Y >= p.Y)
-                    if (polygonPoints[i].X + (p.Y - polygonPoints[i].Y) / (polygonPoints[j].Y - polygonPoints[i].Y) * (polygonPoints[j].X - polygonPoints[i].X) < p.X)
-                        inPolygon = !inPolygon;
-                j = i;
+                p2 = polygonPoints[i % pointCount];
+                if (p.Y > Math.Min(p1.Y, p2.Y)// Y контрольной точки больше минимума Y конца отрезка
+                && p.Y <= Math.Max(p1.Y, p2.Y))// Y контрольной точки меньше максимального Y конца отрезка
+                {
+                    if (p.X <= Math.Max(p1.X, p2.X))// X контрольной точки меньше максимального X конечной точки сегмента изолинии (для оценки используйте левый луч контрольной точки).
+                    {
+                        if (p1.Y != p2.Y)// Отрезок не параллелен оси X
+                        {
+                            xinters = (p.Y - p1.Y) * (p2.X - p1.X) / (p2.Y - p1.Y) + p1.X;
+                            if (p1.X == p2.X || p.X <= xinters)
+                            {
+                                counter++;
+                            }
+                        }
+                    }
+
+                }
+                p1 = p2;
             }
+
+            if (counter % 2 == 0)
+
+                inPolygon = false;
+            else
+                inPolygon = true;
             return inPolygon;
         }
 
