@@ -107,9 +107,115 @@ namespace polygon_intersection
             }
         }
 
+        bool isPointInPolygon(Point p, List<Point> polygonPoints)
+        {
+            // определение принадлежности точки многоугольнику
+            bool inPolygon = false;
+            int j = polygonPoints.Count() - 1;
+            for (int i = 0; i < polygonPoints.Count(); i++)
+            {
+                if (polygonPoints[i].Y < p.Y && polygonPoints[j].Y >= p.Y || polygonPoints[j].Y < p.Y && polygonPoints[i].Y >= p.Y)
+                    if (polygonPoints[i].X + (p.Y - polygonPoints[i].Y) / (polygonPoints[j].Y - polygonPoints[i].Y) * (polygonPoints[j].X - polygonPoints[i].X) < p.X)
+                        inPolygon = !inPolygon;
+                j = i;
+            }
+            return inPolygon;
+        }
+
+        Tuple<int, int, int> GetFunc(Point p1, Point p2)//чтобы получить коэффициенты уравнения, через которое проходит прямая
+        {
+            int coef1 = p1.Y - p2.Y;
+            int coef2 = p2.X - p1.X;
+            int coef3 = p1.X * p2.Y - p2.X * p1.Y;
+            return Tuple.Create(coef1, coef2, coef3);
+        }
+
+        /// <summary>
+        /// The following code is stolen from https://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="q"></param>
+        /// <param name="r"></param>
+        /// <returns></returns>
+
+        // Given three collinear points p, q, r, the function checks if
+        // point q lies on line segment 'pr'
+        static Boolean onSegment(Point p, Point q, Point r)
+        {
+            return q.X <= Math.Max(p.X, r.X) && q.X >= Math.Min(p.X, r.X) &&
+                q.Y <= Math.Max(p.Y, r.Y) && q.Y >= Math.Min(p.Y, r.Y);
+        }
+
+        // To find orientation of ordered triplet (p, q, r).
+        // The function returns following values
+        // 0 --> p, q and r are collinear
+        // 1 --> Clockwise
+        // 2 --> Counterclockwise
+        static int orientation(Point p, Point q, Point r)
+        {
+            // See https://www.geeksforgeeks.org/orientation-3-ordered-points/
+            // for details of below formula.
+            int val = (q.Y - p.Y) * (r.X - q.X) -
+                    (q.X - p.X) * (r.Y - q.Y);
+
+            if (val == 0) return 0; // collinear
+
+            return (val > 0) ? 1 : 2; // clock or counterclock wise
+        }
+
+        // The main function that returns true if line segment 'p1q1'
+        // and 'p2q2' intersect.
+        static Boolean doIntersect(Point p1, Point q1, Point p2, Point q2)
+        {
+            // Find the four orientations needed for general and
+            // special cases
+            int o1 = orientation(p1, q1, p2);
+            int o2 = orientation(p1, q1, q2);
+            int o3 = orientation(p2, q2, p1);
+            int o4 = orientation(p2, q2, q1);
+
+            // General case
+            if (o1 != o2 && o3 != o4)
+                return true;
+
+            // Special Cases
+            // p1, q1 and p2 are collinear and p2 lies on segment p1q1
+            if (o1 == 0 && onSegment(p1, p2, q1)) return true;
+
+            // p1, q1 and q2 are collinear and q2 lies on segment p1q1
+            if (o2 == 0 && onSegment(p1, q2, q1)) return true;
+
+            // p2, q2 and p1 are collinear and p1 lies on segment p2q2
+            if (o3 == 0 && onSegment(p2, p1, q2)) return true;
+
+            // p2, q2 and q1 are collinear and q1 lies on segment p2q2
+            if (o4 == 0 && onSegment(p2, q1, q2)) return true;
+
+            return false; // Doesn't fall in any of the above cases
+        }
+
+        Point CrossLines(Point p1, Point p2, Point p3, Point p4)
+        {
+            (int a1, int b1, int c1) = GetFunc(p1, p2);
+            (int a2, int b2, int c2) = GetFunc(p3, p4);
+            int divisor = a1 * b2 - a2 * b1;
+            if (divisor == 0)
+                return new Point(int.MaxValue, int.MaxValue);
+            int x = (b1 * c2 - b2 * c1) / divisor;
+            int y = (c1 * a2 - c2 * a1) / divisor;
+            return new Point(x, y);
+        }
+
         void intersectPolygons()
         {
+            List<Point> innerPolygon = new List<Point>();
+            innerPolygon.AddRange(polygon1Points.Where(p => isPointInPolygon(p,polygon2Points)));
+            innerPolygon.AddRange(polygon2Points.Where(p => isPointInPolygon(p, polygon1Points)));
 
+            foreach(var p in innerPolygon)
+            {
+                g.FillEllipse(new SolidBrush(Color.Red), p.X - 4, p.Y - 4, 9, 9);
+            }
         }
     }
 }
